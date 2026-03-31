@@ -1,25 +1,13 @@
 import { create } from "zustand";
 
-interface MissionStore {
-  isMorningBriefOpen: boolean;
-  isNightDebriefOpen: boolean;
+interface MissionState {
   isSidebarOpen: boolean;
-  openMorningBrief: () => void;
-  closeMorningBrief: () => void;
-  openNightDebrief: () => void;
-  closeNightDebrief: () => void;
+  setSidebarOpen: (val: boolean) => void;
   toggleSidebar: () => void;
-  closeSidebar: () => void;
 }
 
-export const useMissionStore = create<MissionStore>((set) => ({
-  isMorningBriefOpen: false,
-  isNightDebriefOpen: false,
+export const useMissionStore = create<MissionState>((set) => ({
   isSidebarOpen: false,
-  openMorningBrief: () => set({ isMorningBriefOpen: true }),
-  closeMorningBrief: () => set({ isMorningBriefOpen: false }),
-  openNightDebrief: () => set({ isNightDebriefOpen: true }),
-  closeNightDebrief: () => set({ isNightDebriefOpen: false }),
-  toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
-  closeSidebar: () => set({ isSidebarOpen: false }),
+  setSidebarOpen: (val) => set({ isSidebarOpen: val }),
+  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
 }));

@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { Flame, CheckCircle2, BarChart2, Moon, Timer, Target, BookOpen, Square, CheckSquare, Star, Sparkles, Plus } from "lucide-react";
+import { BarChart2, Timer, Target, BookOpen, Square, CheckSquare, Star, Sparkles, Plus } from "lucide-react";
 import clsx from "clsx";
-import { useMissionStore } from "@/store/useMissionStore";
 import { getUserStats, addXP } from "@/actions/user";
 import { getSubjectProgress, getCurrentWeek, markTopicStudied, unmarkTopicStudied, getAllWeeksData } from "@/actions/topics";
 import { getOverdueRevisions } from "@/actions/revision";
@@ -27,8 +26,6 @@ function getWeekDateRange(week: number): string {
 }
 
 export default function MissionControl() {
-  const [missionAccepted, setMissionAccepted] = useState(false);
-  const { openMorningBrief, openNightDebrief } = useMissionStore();
   const [stats, setStats] = useState<any>(null);
   const [allTopics, setAllTopics] = useState<any[]>([]);
   const [revisions, setRevisions] = useState<any[]>([]);
@@ -62,7 +59,6 @@ export default function MissionControl() {
 
   const currentTopics = useMemo(() => allTopics.filter(t => t.week === currentWeek), [allTopics, currentWeek]);
   const goals = weekGoals[`w${currentWeek}`] || { revised: false, mocked: false };
-  const handleInitiateBrief = () => { openMorningBrief(); setMissionAccepted(true); };
   const handleTopicToggle = async (topic: any) => {
     if (topic.status === "not_started") await markTopicStudied(topic.id, 2);
     else await unmarkTopicStudied(topic.id);
@@ -84,43 +80,22 @@ export default function MissionControl() {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pb-20">
       {/* LEFT */}
       <div className="lg:col-span-3 space-y-4">
-        <div className="card-glow p-4 space-y-3">
-          <div className="flex justify-between items-center">
-            <h2 className="font-mono text-[11px] tracking-widest uppercase font-bold flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">Daily Core Habits</span>
-            </h2>
-          </div>
-          <div className="space-y-2 mt-2">
-            {DAILY_CHECKLIST.map(item => (
-              <div key={item.id} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/3 border border-white/5">
-                <span className="text-lg shrink-0">{item.emoji}</span>
-                <span className="text-[13px] text-foreground/90 font-medium">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card-glow p-4 space-y-3">
-          <h2 className="font-mono text-[11px] text-muted-foreground tracking-widest uppercase font-semibold">⚡ Protocols</h2>
-          {!missionAccepted ? (
-            <button onClick={handleInitiateBrief} className="w-full py-2.5 px-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium text-sm rounded-lg transition hover:opacity-90 glow-accent">☀️ Start Morning Brief</button>
-          ) : (
-            <div className="flex items-center gap-2 text-green-400 font-medium text-sm p-3 bg-green-500/5 rounded-lg border border-green-500/15">
-              <CheckCircle2 className="w-4 h-4" /><span>✅ Briefing Done</span>
+        {/* NEW GLOWING BORDER WRAPPER FOR DAILY HABITS */}
+<div className="rounded-2xl bg-red-500/60 p-[0.7px] shadow-[0_0_20px_rgba(239,68,68,0.2)]">          <div className="bg-[#0f0f11] rounded-[15px] p-4 space-y-3 h-full">
+            <div className="flex justify-between items-center">
+              <h2 className="font-mono text-[11px] tracking-widest uppercase font-bold flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">Daily Core Habits</span>
+              </h2>
             </div>
-          )}
-          <button onClick={openNightDebrief} className="w-full p-2.5 rounded-lg flex items-center justify-center gap-3 card-glow hover:bg-white/3 transition">
-            <Moon className="w-4 h-4 text-muted-foreground" />
-            <span className="font-mono text-[11px] tracking-widest uppercase font-semibold">🌙 Night Debrief</span>
-          </button>
-        </div>
-
-        <div className="card-glow p-4 flex items-center gap-3">
-          <Flame className={clsx("w-7 h-7", stats?.streak > 0 ? "text-orange-400" : "text-muted-foreground/30")} />
-          <div>
-            <div className="font-mono text-[11px] text-muted-foreground tracking-widest uppercase">🔥 Streak</div>
-            <div className="font-display font-bold text-xl text-orange-400">{stats ? `${stats.streak} Days` : "--"}</div>
+            <div className="space-y-2 mt-2">
+              {DAILY_CHECKLIST.map(item => (
+                <div key={item.id} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/3 border border-white/5">
+                  <span className="text-lg shrink-0">{item.emoji}</span>
+                  <span className="text-[13px] text-foreground/90 font-medium">{item.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -202,25 +177,27 @@ export default function MissionControl() {
 
       {/* RIGHT */}
       <div className="lg:col-span-3 space-y-4">
-        <div className="card-glow p-4">
-          <div className="flex justify-between items-center mb-3 pb-2 border-b border-[rgba(56,189,248,0.12)]">
-            <h2 className="font-mono text-[11px] tracking-widest uppercase font-bold flex items-center gap-2">
-              <BarChart2 className="w-3.5 h-3.5 text-orange-400" />
-              <span className="bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">Subject Progress</span>
-            </h2>
-          </div>
-          <div className="space-y-3.5">
-            {subjectProgress.map(sub => (
-              <div key={sub.code}>
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="font-medium text-[13px] text-foreground">{sub.name}</span>
-                  <span className="text-muted-foreground font-mono text-[11px] font-bold">{sub.percent}%</span>
+        {/* NEW GLOWING BORDER WRAPPER FOR SUBJECT PROGRESS */}
+<div className="rounded-2xl bg-green-500/60 p-[1px] shadow-[0_0_20px_rgba(34,197,94,0.2)]">      <div className="bg-[#0f0f11] rounded-[15px] p-4 h-full">
+            <div className="flex justify-between items-center mb-3 pb-2 border-b border-[rgba(56,189,248,0.12)]">
+              <h2 className="font-mono text-[11px] tracking-widest uppercase font-bold flex items-center gap-2">
+                <BarChart2 className="w-3.5 h-3.5 text-orange-400" />
+                <span className="bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">Subject Progress</span>
+              </h2>
+            </div>
+            <div className="space-y-3.5">
+              {subjectProgress.map(sub => (
+                <div key={sub.code}>
+                  <div className="flex justify-between text-sm mb-1.5">
+                    <span className="font-medium text-[13px] text-foreground">{sub.name}</span>
+                    <span className="text-muted-foreground font-mono text-[11px] font-bold">{sub.percent}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/3 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-500" style={{ width: `${sub.percent}%` }} />
+                  </div>
                 </div>
-                <div className="w-full h-1.5 bg-white/3 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-500" style={{ width: `${sub.percent}%` }} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
