@@ -1,68 +1,52 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import { format, differenceInDays, differenceInSeconds } from "date-fns";
-import { Bell } from "lucide-react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Bell, Menu, Flame } from "lucide-react";
+import { useMissionStore } from "@/store/useMissionStore";
 
 export function TopBar() {
-  const [now, setNow] = useState<Date | null>(null);
-  
-  // Exam Date based on 17-week Phase 4 end
-  const examDate = new Date("2026-07-30T09:00:00");
+  const [mounted, setMounted] = useState(false);
+  const [timeStr, setTimeStr] = useState("--:--:--");
+  const [daysLeft, setDaysLeft] = useState(0);
+  const toggleSidebar = useMissionStore((s) => s.toggleSidebar);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    setNow(new Date());
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
+    setMounted(true);
+    const examDate = new Date("2026-07-30");
+    const update = () => {
+      const now = new Date();
+      setTimeStr(now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }));
+      setDaysLeft(Math.max(0, Math.ceil((examDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))));
+    };
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  if (!now) return <header className="h-16 border-b bg-background sticky top-0 z-50"></header>;
-
-  // Clock calculations
-  const timeString = format(now, "HH:mm:ss");
-
-  // Countdown calculations
-  const daysRem = differenceInDays(examDate, now);
-  const totalSecondsRem = differenceInSeconds(examDate, now);
-  const hrsRem = Math.floor((totalSecondsRem % (3600 * 24)) / 3600);
-  const minsRem = Math.floor((totalSecondsRem % 3600) / 60);
-  const secsRem = totalSecondsRem % 60;
-
-  const countdownText = `D-${daysRem} | ${hrsRem.toString().padStart(2, "0")}:${minsRem.toString().padStart(2, "0")}:${secsRem.toString().padStart(2, "0")}`;
-
   return (
-    <header className="h-16 border-b bg-background sticky top-0 z-50 flex items-center justify-between px-6">
-      
-      {/* Left: App Logo */}
-      <div className="flex items-center space-x-2">
-        <span className="font-display font-bold text-2xl tracking-widest text-primary">
-          ΣXAM OS
-        </span>
+    <header className="h-14 border-b border-[rgba(56,189,248,0.2)] flex items-center justify-between px-4 md:px-6 bg-card/80 backdrop-blur-md sticky top-0 z-50" style={{ boxShadow: "0 1px 12px rgba(56,189,248,0.05)" }}>
+      <div className="flex items-center gap-3">
+        <button onClick={toggleSidebar} className="md:hidden p-2 -ml-1 rounded-lg hover:bg-white/5 transition" aria-label="Open menu">
+          <Menu className="w-5 h-5 text-muted-foreground" />
+        </button>
+        <Link href="/" className="flex items-center gap-2 font-mono font-bold text-base tracking-[0.15em] hover:opacity-80 transition">
+          <Flame className="w-5 h-5 text-orange-500" />
+          <span className="bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">FAMILY PRIDE</span>
+        </Link>
       </div>
-
-      {/* Center: Live Clock */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="font-display text-2xl font-medium tracking-widest text-foreground">
-          {timeString}
-        </div>
+      <div className="font-mono text-base font-bold tabular-nums text-foreground" suppressHydrationWarning>
+        {mounted ? timeStr : "--:--:--"}
       </div>
-
-      {/* Right: Countdown & Notifications */}
-      <div className="flex items-center space-x-6">
-        <div className="font-mono font-semibold tracking-wider text-sm md:text-base border border-border px-3 py-1 rounded bg-secondary text-secondary-foreground">
-          {countdownText}
+      <div className="flex items-center gap-4">
+        <div className="font-mono text-xs text-muted-foreground hidden sm:block" suppressHydrationWarning>
+          <span className="text-orange-400 font-bold">{mounted ? `D-${daysLeft}` : "D-..."}</span>
+          {" · "}
+          <span>🎯 30/07/2026</span>
         </div>
-        
-        <button className="relative text-muted-foreground hover:text-foreground transition-colors">
-          <Bell className="w-6 h-6" />
-          {/* Unread badge */}
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full"></span>
+        <button className="relative p-2 rounded-lg hover:bg-white/5 transition">
+          <Bell className="w-4 h-4 text-muted-foreground" />
         </button>
       </div>
-
     </header>
   );
 }

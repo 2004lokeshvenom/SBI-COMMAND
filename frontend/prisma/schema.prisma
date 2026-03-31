@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String   @default("Student")
+  email        String   @unique @default("student@sbi.prep")
+  daily_hours  Int      @default(6)
+  exam_date    DateTime @default("2026-07-30T00:00:00.000Z")
+  settings     String   @default("{}")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  progress          TopicProgress[]
+  revision_schedule RevisionSchedule[]
+  study_sessions    StudySession[]
+  mock_tests        MockTest[]
+  check_ins         DailyCheckIn[]
+  notes             Note[]
+  achievements      Achievement[]
+  xp_events         XPEvent[]
+  notification_log  NotificationLog[]
+  user_states       UserState[]
+}
+
+model Subject {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  code  String @unique
+  name  String
+  color String
+  icon  String
+
+  chapters Chapter[]
+}
+
+model Chapter {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  order_index Int    @default(0)
+  subject_id  String @db.ObjectId
+
+  subject Subject @relation(fields: [subject_id], references: [id])
+  topics  Topic[]
+}
+
+model Topic {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  chapter_id      String @db.ObjectId
+  name            String
+  phase           Int    @default(1)
+  week_number     Int    @default(1)
+  estimated_hours Float  @default(2)
+  priority        String @default("medium")
+  exam_type       String @default("both")
+
+  chapter  Chapter          @relation(fields: [chapter_id], references: [id])
+  progress TopicProgress[]
+  revision RevisionSchedule[]
+}
+
+model TopicProgress {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  user_id          String    @db.ObjectId
+  topic_id         String    @db.ObjectId
+  status           String    @default("not_started")
+  confidence       Int       @default(0)
+  times_revised    Int       @default(0)
+  first_studied_at DateTime?
+  last_studied_at  DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  user  User  @relation(fields: [user_id], references: [id])
+  topic Topic @relation(fields: [topic_id], references: [id])
+
+  @@unique([user_id, topic_id])
+}
+
+model RevisionSchedule {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id          String   @db.ObjectId
+  topic_id         String   @db.ObjectId
+  next_review_date DateTime
+  last_reviewed_at DateTime?
+  ease_factor      Float    @default(2.5)
+  interval_days    Int      @default(1)
+  repetition_count Int      @default(0)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  user  User  @relation(fields: [user_id], references: [id])
+  topic Topic @relation(fields: [topic_id], references: [id])
+
+  @@unique([user_id, topic_id])
+}
+
+model StudySession {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id      String   @db.ObjectId
+  started_at   DateTime @default(now())
+  ended_at     DateTime?
+  duration_min Int      @default(0)
+  subject      String?
+  topic_id     String?
+  notes        String?
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model MockTest {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id         String   @db.ObjectId
+  test_date       DateTime @default(now())
+  created_at      DateTime @default(now())
+  test_name       String
+  format          String   @default("prelims")
+  
+  // Legacy fields
+  total_score     Float?
+  quant_score     Float?
+  reasoning_score Float?
+  english_score   Float?
+  ga_score        Float?
+  total_marks     Float?
+  time_taken_min  Int?
+
+  // New precise fields
+  norm_quant           Float @default(0)
+  norm_reasoning_pre   Float @default(0)
+  norm_reasoning_mains Float @default(0)
+  norm_di              Float @default(0)
+  norm_english_pre     Float @default(0)
+  norm_english_mains   Float @default(0)
+  norm_ga              Float @default(0)
+  norm_desc            Float @default(0)
+  total_normalized_pct Float @default(0)
+  
+  // Old fallback fields
+  norm_reasoning       Float @default(0)
+  norm_english         Float @default(0)
+  
+  notes           String?
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model DailyCheckIn {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id String   @db.ObjectId
+  date    DateTime @default(now())
+  energy  Int      @default(3)
+  focus   Int      @default(3)
+  notes   String?
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model Note {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id    String   @db.ObjectId
+  title      String
+  content    String
+  subject    String?
+  topic_id   String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model Achievement {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id     String   @db.ObjectId
+  name        String
+  description String
+  unlocked_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model XPEvent {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id    String   @db.ObjectId
+  points     Int
+  reason     String
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model NotificationLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  user_id    String   @db.ObjectId
+  message    String
+  type       String
+  read       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+// Key-value store for persisting UI state (daily checklist, practiced, timer stats)
+model UserState {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  user_id String @db.ObjectId
+  key     String
+  value   String // JSON stringified
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, key])
+}

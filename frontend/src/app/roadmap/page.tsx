@@ -1,263 +1,163 @@
 "use client";
-
 import { useState, useEffect, useMemo } from "react";
-import { Flag, CheckCircle2, Circle, Lock, Flame, Trophy, ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Trophy, Flag, Flame, Lock, CheckCircle2, Circle } from "lucide-react";
+import { getAllWeeksData } from "@/actions/topics";
 import clsx from "clsx";
-import { getCurrentWeek, getAllWeeksData } from "@/actions/topics";
 
-// Phase definitions
 const PHASES = [
-  { id: 1, name: "Foundation", weeks: [1, 2, 3, 4], color: "blue", goal: "Build strong basics in all subjects" },
-  { id: 2, name: "Core Building", weeks: [5, 6, 7, 8], color: "purple", goal: "Speed, application & first sectional mocks" },
-  { id: 3, name: "Advanced + Prelims", weeks: [9, 10, 11, 12], color: "orange", goal: "Full mock tests & advanced topics" },
-  { id: 4, name: "Blast + Mains", weeks: [13, 14, 15, 16, 17], color: "red", goal: "Final sprint, descriptive & full mock marathon" },
+  { id: 1, name: "Foundation", weeks: [1, 2, 3, 4], emoji: "🏗️", color: "from-blue-500 to-cyan-400", dot: "bg-blue-500", desc: "Build strong basics" },
+  { id: 2, name: "Build-Up", weeks: [5, 6, 7, 8], emoji: "⚡", color: "from-purple-500 to-pink-400", dot: "bg-purple-500", desc: "Strengthen & start mocks" },
+  { id: 3, name: "Mains Prep", weeks: [9, 10, 11, 12], emoji: "🔥", color: "from-orange-500 to-red-400", dot: "bg-orange-500", desc: "Advanced topics + mains" },
+  { id: 4, name: "Final Sprint", weeks: [13, 14, 15, 16, 17], emoji: "🏆", color: "from-amber-500 to-yellow-400", dot: "bg-amber-500", desc: "Full mocks & revision" },
 ];
 
-function getWeekDateRange(week: number): string {
+function getWeekDates(week: number) {
   const start = new Date("2026-04-01");
   start.setDate(start.getDate() + (week - 1) * 7);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
-  const fmt = (d: Date) => d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
-  return `${fmt(start)} – ${fmt(end)}`;
+  return `${start.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`;
 }
 
 export default function RoadmapPage() {
-  const [currentWeek, setCurrentWeek] = useState(1);
   const [allTopics, setAllTopics] = useState<any[]>([]);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const week = await getCurrentWeek();
-        setCurrentWeek(week);
-        setExpandedWeek(week);
-        const data = await getAllWeeksData();
-        setAllTopics(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    getAllWeeksData().then(d => { setAllTopics(d); setLoading(false); });
   }, []);
 
-  const topicsByWeek = useMemo(() => {
-    const map: Record<number, any[]> = {};
-    for (let w = 1; w <= 17; w++) map[w] = [];
-    allTopics.forEach(t => { if (map[t.week]) map[t.week].push(t); });
+  const currentWeek = useMemo(() => {
+    const now = new Date();
+    const start = new Date("2026-04-01");
+    const diff = Math.floor((now.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    return Math.max(1, Math.min(17, diff + 1));
+  }, []);
+
+  const weekData = useMemo(() => {
+    const map: Record<number, { total: number; done: number; topics: any[] }> = {};
+    for (let w = 1; w <= 17; w++) {
+      const topics = allTopics.filter(t => t.week === w);
+      map[w] = { total: topics.length, done: topics.filter(t => t.status !== "not_started").length, topics };
+    }
     return map;
   }, [allTopics]);
 
-  const weekProgress = useMemo(() => {
-    const result: Record<number, { total: number; done: number; percent: number }> = {};
-    for (let w = 1; w <= 17; w++) {
-      const topics = topicsByWeek[w] || [];
-      const total = topics.length;
-      const done = topics.filter(t => t.status !== "not_started").length;
-      result[w] = { total, done, percent: total > 0 ? Math.round((done / total) * 100) : 0 };
-    }
-    return result;
-  }, [topicsByWeek]);
+  const totalDone = allTopics.filter(t => t.status !== "not_started").length;
+  const totalTopics = allTopics.length;
+  const overallPct = totalTopics > 0 ? Math.round((totalDone / totalTopics) * 100) : 0;
 
-  // Overall journey progress
-  const overallProgress = useMemo(() => {
-    const total = allTopics.length;
-    const done = allTopics.filter(t => t.status !== "not_started").length;
-    return { total, done, percent: total > 0 ? Math.round((done / total) * 100) : 0 };
-  }, [allTopics]);
-
-  if (loading) return <div className="h-48 flex items-center justify-center font-mono text-muted-foreground uppercase text-sm">Loading Roadmap...</div>;
+  if (loading) return <div className="h-48 flex items-center justify-center font-mono text-muted-foreground uppercase text-sm tracking-widest">🗺️ Loading...</div>;
 
   return (
-    <div className="space-y-8 pb-20 max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto pb-20 space-y-8">
       {/* Header */}
-      <div className="text-center space-y-3 border-b pb-6">
-        <h1 className="font-display text-4xl font-bold tracking-tight flex items-center justify-center gap-3">
-          <Trophy className="w-8 h-8 text-orange-500" /> SBI PO Journey
+      <div className="text-center animate-fade-in">
+        <h1 className="font-display text-3xl md:text-4xl font-bold">
+          <span className="bg-gradient-to-r from-orange-400 via-red-400 to-amber-400 bg-clip-text text-transparent">🏆 SBI PO Journey</span>
         </h1>
-        <p className="font-mono text-muted-foreground uppercase text-sm">
-          17 Weeks · April 1 → July 30 · {overallProgress.done}/{overallProgress.total} Milestones Reached
-        </p>
-        {/* Overall progress bar */}
-        <div className="w-full max-w-md mx-auto">
-          <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500 transition-all duration-700 rounded-full"
-              style={{ width: `${overallProgress.percent}%` }}
-            />
+        <p className="font-mono text-xs text-muted-foreground mt-2 uppercase tracking-widest">17 Weeks · Apr 1 → Jul 30 · {totalDone}/{totalTopics} Done</p>
+        <div className="mt-4 max-w-md mx-auto">
+          <div className="w-full h-3 bg-white/3 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-orange-500 via-red-500 to-amber-500 rounded-full transition-all duration-700" style={{ width: `${overallPct}%` }} />
           </div>
-          <div className="text-xs font-mono text-primary font-bold mt-1">{overallProgress.percent}% Complete</div>
+          <p className="font-mono text-sm font-bold text-orange-400 mt-1">{overallPct}% Complete 🔥</p>
         </div>
       </div>
 
-      {/* Road Timeline */}
-      <div className="relative">
-        {/* Vertical road line */}
-        <div className="absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 via-purple-500 via-orange-500 to-red-500 rounded-full" />
+      {/* Phases */}
+      {PHASES.map(phase => {
+        const phaseDone = phase.weeks.reduce((s, w) => s + (weekData[w]?.done || 0), 0);
+        const phaseTotal = phase.weeks.reduce((s, w) => s + (weekData[w]?.total || 0), 0);
+        const phasePct = phaseTotal > 0 ? Math.round((phaseDone / phaseTotal) * 100) : 0;
+        const isCurrentPhase = phase.weeks.includes(currentWeek);
 
-        {PHASES.map((phase, phaseIdx) => (
-          <div key={phase.id} className="relative mb-8">
-            {/* Phase marker */}
-            <div className="flex items-center gap-4 mb-4 relative z-10">
-              <div className={clsx(
-                "w-16 h-16 rounded-full flex items-center justify-center shrink-0 shadow-lg ring-4 ring-background",
-                phase.color === "blue" ? "bg-blue-500" :
-                phase.color === "purple" ? "bg-purple-500" :
-                phase.color === "orange" ? "bg-orange-500" : "bg-red-500"
-              )}>
-                <Flag className="w-7 h-7 text-white" />
+        return (
+          <div key={phase.id} className="animate-fade-in-up">
+            {/* Phase Header */}
+            <div className={clsx("flex items-center gap-4 mb-4 p-4 rounded-2xl card-glow", isCurrentPhase && "border-orange-500/15 glow-accent")}>
+              <div className={clsx("w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-gradient-to-br", phase.color, "text-white shadow-lg")}>
+                {phasePct === 100 ? "✅" : phase.emoji}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-display font-bold text-lg">Phase {phase.id}: {phase.name}</h2>
-                  {phase.weeks.every(w => weekProgress[w]?.percent === 100) && (
-                    <span className="text-[9px] font-mono font-bold bg-green-500/20 text-green-600 dark:text-green-400 px-2 py-0.5 rounded uppercase">Completed</span>
-                  )}
-                </div>
-                <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{phase.goal}</p>
+              <div className="flex-1">
+                <h2 className="font-display text-lg font-bold flex items-center gap-2">
+                  {phase.name}
+                  {isCurrentPhase && <span className="text-[9px] font-mono bg-orange-500/15 text-orange-400 px-2 py-0.5 rounded-full tracking-widest">🔥 NOW</span>}
+                </h2>
+                <p className="text-xs text-muted-foreground">{phase.desc} · {phaseDone}/{phaseTotal} topics</p>
+              </div>
+              <div className="text-right">
+                <span className={clsx("font-display text-xl font-bold", phasePct === 100 ? "text-green-400" : "text-orange-400")}>{phasePct}%</span>
               </div>
             </div>
 
-            {/* Week milestones */}
-            <div className="ml-4 space-y-3">
-              {phase.weeks.map(week => {
-                const wp = weekProgress[week];
-                const isPast = week < currentWeek;
-                const isCurrent = week === currentWeek;
-                const isFuture = week > currentWeek;
-                const isExpanded = expandedWeek === week;
-                const topics = topicsByWeek[week] || [];
-                const isComplete = wp.percent === 100;
+            {/* Weeks in Phase */}
+            <div className="relative ml-6 pl-8 border-l-2 border-[rgba(56,189,248,0.15)] space-y-3">
+              {phase.weeks.map(w => {
+                const wd = weekData[w] || { total: 0, done: 0, topics: [] };
+                const wPct = wd.total > 0 ? Math.round((wd.done / wd.total) * 100) : 0;
+                const isNow = w === currentWeek;
+                const isFuture = w > currentWeek;
+                const isExpanded = expandedWeek === w;
 
                 return (
-                  <div key={week} className="relative">
-                    {/* Connecting dot on the road */}
-                    <div className={clsx(
-                      "absolute left-4 top-4 w-3 h-3 rounded-full ring-2 ring-background z-10",
-                      isComplete ? "bg-green-500" :
-                      isCurrent ? "bg-primary animate-pulse" :
-                      isPast ? "bg-orange-500" :
-                      "bg-muted-foreground/30"
-                    )} />
+                  <div key={w}>
+                    {/* Week dot on timeline */}
+                    <div className={clsx("absolute -left-[9px] w-4 h-4 rounded-full border-2",
+                      wPct === 100 ? "bg-green-500 border-green-400" :
+                      isNow ? "bg-orange-500 border-orange-400 animate-pulse-glow" :
+                      isFuture ? "bg-secondary border-muted-foreground/30" :
+                      `${phase.dot} border-white/20`
+                    )} style={{ marginTop: "14px" }} />
 
-                    {/* Week Card */}
-                    <div className={clsx(
-                      "ml-12 rounded-lg border transition-all",
-                      isCurrent ? "border-primary/50 bg-primary/5 shadow-md ring-1 ring-primary/20" :
-                      isComplete ? "border-green-500/30 bg-green-500/5" :
-                      isPast ? "border-orange-500/20 bg-orange-500/5" :
-                      "border-border bg-card opacity-80"
-                    )}>
-                      <button
-                        onClick={() => setExpandedWeek(isExpanded ? null : week)}
-                        className="w-full flex items-center justify-between p-4 text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* Status icon */}
-                          {isComplete ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                          ) : isCurrent ? (
-                            <Flame className="w-5 h-5 text-primary shrink-0" />
-                          ) : isFuture ? (
-                            <Lock className="w-5 h-5 text-muted-foreground/30 shrink-0" />
-                          ) : (
-                            <Circle className="w-5 h-5 text-orange-500 shrink-0" />
-                          )}
-
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className={clsx(
-                                "font-display font-bold text-sm",
-                                isCurrent ? "text-primary" : isComplete ? "text-green-600 dark:text-green-400" : "text-foreground"
-                              )}>
-                                Week {week}
-                              </span>
-                              {isCurrent && (
-                                <span className="text-[9px] font-mono font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded uppercase animate-pulse">
-                                  YOU ARE HERE
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] font-mono text-muted-foreground">{getWeekDateRange(week)}</span>
+                    <button
+                      onClick={() => setExpandedWeek(isExpanded ? null : w)}
+                      className={clsx("w-full card-glow p-4 text-left transition-all hover:border-orange-500/15",
+                        isNow && "border-orange-500/15",
+                        isFuture && "opacity-60"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {wPct === 100 ? <CheckCircle2 className="w-4 h-4 text-green-400" /> :
+                           isFuture ? <Lock className="w-4 h-4 text-muted-foreground/30" /> :
+                           <Circle className="w-4 h-4 text-muted-foreground/50" />}
+                          <div>
+                            <span className="font-display font-bold text-sm">Week {w} {isNow && "🔥"}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground ml-2">{getWeekDates(w)}</span>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-3 shrink-0">
-                          {/* Progress ring */}
-                          <div className="flex items-center gap-2">
-                            <span className={clsx(
-                              "text-xs font-mono font-bold",
-                              isComplete ? "text-green-600 dark:text-green-400" : "text-primary"
-                            )}>
-                              {wp.done}/{wp.total}
-                            </span>
-                            <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className={clsx(
-                                  "h-full rounded-full transition-all duration-500",
-                                  isComplete ? "bg-green-500" : "bg-primary"
-                                )}
-                                style={{ width: `${wp.percent}%` }}
-                              />
-                            </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-xs text-muted-foreground">{wd.done}/{wd.total}</span>
+                          <div className="w-16 h-1.5 bg-white/3 rounded-full overflow-hidden hidden sm:block">
+                            <div className={clsx("h-full rounded-full bg-gradient-to-r", phase.color)} style={{ width: `${wPct}%` }} />
                           </div>
                           {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                         </div>
-                      </button>
+                      </div>
+                    </button>
 
-                      {/* Expanded: show actual topics from DB */}
-                      {isExpanded && topics.length > 0 && (
-                        <div className="px-4 pb-4 border-t border-border/50 space-y-1.5">
-                          {topics.map(topic => (
-                            <div key={topic.id} className="flex items-center gap-3 py-1.5 px-2">
-                              {topic.status !== "not_started" ? (
-                                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                              ) : (
-                                <Circle className="w-4 h-4 text-muted-foreground/30 shrink-0" />
-                              )}
-                              <span className={clsx(
-                                "text-sm",
-                                topic.status !== "not_started" ? "text-green-600 dark:text-green-400 line-through opacity-60" : "text-foreground"
-                              )}>
-                                {topic.name}
-                              </span>
-                              <span className="text-[9px] font-mono text-muted-foreground uppercase ml-auto shrink-0">{topic.subject}</span>
+                    {isExpanded && (
+                      <div className="mt-1 ml-7 space-y-1 animate-fade-in">
+                        {wd.topics.map(t => (
+                          <div key={t.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white/2">
+                            <div className="flex items-center gap-2">
+                              {t.status !== "not_started" ? <CheckCircle2 className="w-3 h-3 text-green-400" /> : <Circle className="w-3 h-3 text-muted-foreground/30" />}
+                              <span className={clsx("text-xs", t.status !== "not_started" ? "text-green-400/80 line-through" : "")}>{t.name}</span>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                            <span className="font-mono text-[8px] text-muted-foreground uppercase">{t.subject}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-
-            {/* Phase finish line between phases */}
-            {phaseIdx < PHASES.length - 1 && (
-              <div className="flex items-center gap-4 ml-4 mt-4 mb-2">
-                <div className="w-8 border-t-2 border-dashed border-muted-foreground/20" />
-                <span className="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest">Phase {phase.id} → Phase {phase.id + 1}</span>
-                <div className="flex-1 border-t-2 border-dashed border-muted-foreground/20" />
-              </div>
-            )}
           </div>
-        ))}
-
-        {/* Final destination */}
-        <div className="flex items-center gap-4 relative z-10 ml-0">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shrink-0 shadow-lg ring-4 ring-background">
-            <Trophy className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h2 className="font-display font-bold text-xl">🎯 SBI PO Exam Day</h2>
-            <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">July 30, 2026 — You&apos;re ready!</p>
-          </div>
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 }
