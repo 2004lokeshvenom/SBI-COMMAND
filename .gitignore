@@ -5,9 +5,9 @@ dist/
 .env.local
 .env.*.local
 *.log
+*.db
+*.exe
 .DS_Store
-helloworld.exe
-helloworld.cpp
 
 # Local duplicate / legacy app tree (not part of this deploy setup)
 command-center/

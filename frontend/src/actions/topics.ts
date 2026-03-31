@@ -92,17 +92,3 @@ export async function getSubjectProgress() {
     return { code: s.code, name: s.name, color: s.color, total, studied, percent: total > 0 ? Math.round((studied / total) * 100) : 0 };
   });
 }
-
-export async function getTodaysTopics(weekNumber?: number) {
-  const user = await prisma.user.findFirst();
-  if (!user) return [];
-  const week = weekNumber || await getCurrentWeek();
-  const topics = await prisma.topic.findMany({
-    where: { week_number: week },
-    include: { chapter: { include: { subject: true } }, progress: { where: { user_id: user.id } } }
-  });
-  return topics.map((t: any) => ({
-    id: t.id, title: t.chapter.subject.name, task: t.name,
-    status: t.progress.length > 0 ? t.progress[0].status : "not_started", color: t.chapter.subject.color
-  }));
-}

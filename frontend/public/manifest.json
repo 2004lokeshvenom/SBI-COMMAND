@@ -1,9 +1,9 @@
 {
-  "name": "EXAM OS - SBI PO Command Center",
-  "short_name": "EXAM OS",
-  "description": "SBI PO Exam Preparation Command Center",
+  "name": "FAMILY PRIDE — SBI PO Command Center",
+  "short_name": "FAMILY PRIDE",
+  "description": "SBI PO Exam Preparation Command Center — Every hour counts.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#080c15",
-  "theme_color": "#38bdf8"
+  "background_color": "#060a12",
+  "theme_color": "#f97316"
 }

@@ -2,7 +2,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { BarChart2, Timer, Target, BookOpen, Square, CheckSquare, Star, Sparkles, Plus } from "lucide-react";
 import clsx from "clsx";
-import { getUserStats, addXP } from "@/actions/user";
 import { getSubjectProgress, getCurrentWeek, markTopicStudied, unmarkTopicStudied, getAllWeeksData } from "@/actions/topics";
 import { getOverdueRevisions } from "@/actions/revision";
 import { getUserState, setUserState } from "@/actions/state";
@@ -26,7 +25,7 @@ function getWeekDateRange(week: number): string {
 }
 
 export default function MissionControl() {
-  const [stats, setStats] = useState<any>(null);
+
   const [allTopics, setAllTopics] = useState<any[]>([]);
   const [revisions, setRevisions] = useState<any[]>([]);
   const [subjectProgress, setSubjectProgress] = useState<any[]>([]);
@@ -40,8 +39,8 @@ export default function MissionControl() {
       try {
         const week = await getCurrentWeek();
         setCurrentWeek(week);
-        const [userStats, allWeeks, overdueRevs, progress] = await Promise.all([getUserStats(), getAllWeeksData(), getOverdueRevisions(), getSubjectProgress()]);
-        setStats(userStats); setAllTopics(allWeeks); setRevisions(overdueRevs); setSubjectProgress(progress);
+        const [allWeeks, overdueRevs, progress] = await Promise.all([getAllWeeksData(), getOverdueRevisions(), getSubjectProgress()]);
+        setAllTopics(allWeeks); setRevisions(overdueRevs); setSubjectProgress(progress);
         // Load persisted state from DB
         const [savedP, savedG] = await Promise.all([
           getUserState("practiced_topics"),

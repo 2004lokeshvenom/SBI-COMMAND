@@ -27,17 +27,3 @@ export async function addXP(reason: string, points: number) {
   const xp = await prisma.xPEvent.aggregate({ where: { user_id: user.id }, _sum: { points: true } });
   return xp._sum.points || 0;
 }
-
-export async function createCheckIn(data: { energy: number; focus: number; notes?: string }) {
-  const user = await prisma.user.findFirst();
-  if (!user) throw new Error("No user found");
-  return prisma.dailyCheckIn.create({ data: { user_id: user.id, energy: data.energy, focus: data.focus, notes: data.notes } });
-}
-
-export async function createOrUpdateUser(data: { name: string; examDate: string; dailyHours: number }) {
-  const existing = await prisma.user.findFirst();
-  if (existing) {
-    return prisma.user.update({ where: { id: existing.id }, data: { name: data.name, exam_date: new Date(data.examDate), daily_hours: data.dailyHours } });
-  }
-  return prisma.user.create({ data: { name: data.name, email: `${data.name.toLowerCase().replace(/\s+/g, "")}@sbi-command.local`, exam_date: new Date(data.examDate), daily_hours: data.dailyHours } });
-}
