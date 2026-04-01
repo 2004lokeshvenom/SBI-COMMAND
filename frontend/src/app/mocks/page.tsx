@@ -92,7 +92,7 @@ export default function MocksTrackerSBI() {
     }
 
     setScores(defaultScores);
-  }, [formType]);
+  }, [formType, editingId]);
 
   const handleScoreChange = (subject: string, field: "obtained" | "outOf", value: string) => {
     setScores(prev => ({ ...prev, [subject]: { ...prev[subject], [field]: value } }));
@@ -416,7 +416,11 @@ export default function MocksTrackerSBI() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h4 className="font-display font-bold text-sm text-white">{m.test_name}</h4>
-                    <p className="text-[9px] font-mono text-muted-foreground mt-0.5">{new Date(m.test_date || m.created_at || Date.now()).toLocaleDateString("en-IN")}</p>
+                    <p className="text-[9px] font-mono text-muted-foreground mt-0.5">
+                      {(m.test_date || m.created_at)
+                        ? new Date(m.test_date || m.created_at).toLocaleDateString("en-IN")
+                        : "—"}
+                    </p>
                   </div>
                   <div className="text-right flex items-center gap-3">
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 mr-2">

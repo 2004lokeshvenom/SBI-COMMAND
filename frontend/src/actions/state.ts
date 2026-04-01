@@ -1,7 +1,7 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 
-async function ensureUser() {
+export async function ensureUser() {
   let user = await prisma.user.findFirst();
   if (!user) user = await prisma.user.create({ data: { name: "Operative", email: "operative.state@sbi-command.local", exam_date: new Date("2026-07-30") } });
   return user;

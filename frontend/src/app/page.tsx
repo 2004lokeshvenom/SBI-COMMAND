@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { BarChart2, Timer, Target, BookOpen, Square, CheckSquare, Star, Sparkles, Plus } from "lucide-react";
+import { BarChart2, Timer, Square, CheckSquare, Sparkles } from "lucide-react";
 import clsx from "clsx";
-import { getSubjectProgress, getCurrentWeek, markTopicStudied, unmarkTopicStudied, getAllWeeksData } from "@/actions/topics";
-import { getOverdueRevisions } from "@/actions/revision";
-import { getUserState, setUserState } from "@/actions/state";
+import { getSubjectProgress, markTopicStudied, unmarkTopicStudied, getAllWeeksData } from "@/actions/topics";
+import { setUserState } from "@/actions/state";
+import { loadMissionDashboard } from "@/actions/mission";
 import Link from "next/link";
 
 const DAILY_CHECKLIST = [
@@ -37,18 +37,18 @@ export default function MissionControl() {
   useEffect(() => {
     async function loadData() {
       try {
-        const week = await getCurrentWeek();
-        setCurrentWeek(week);
-        const [allWeeks, overdueRevs, progress] = await Promise.all([getAllWeeksData(), getOverdueRevisions(), getSubjectProgress()]);
-        setAllTopics(allWeeks); setRevisions(overdueRevs); setSubjectProgress(progress);
-        // Load persisted state from DB
-        const [savedP, savedG] = await Promise.all([
-          getUserState("practiced_topics"),
-          getUserState("week_goals")
-        ]);
-        if (savedP) setPracticed(savedP);
-        if (savedG) setWeekGoals(savedG);
-      } catch (err) { console.error("Failed:", err); } finally { setLoading(false); }
+        const d = await loadMissionDashboard();
+        setCurrentWeek(d.week);
+        setAllTopics(d.topics);
+        setRevisions(d.revisions);
+        setSubjectProgress(d.subjectProgress);
+        if (d.practiced) setPracticed(d.practiced);
+        if (d.weekGoals) setWeekGoals(d.weekGoals);
+      } catch (err) {
+        console.error("Failed:", err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, []);
@@ -57,6 +57,12 @@ export default function MissionControl() {
   const saveGoals = (next: Record<string, { revised: boolean; mocked: boolean }>) => { setWeekGoals(next); setUserState("week_goals", next); };
 
   const currentTopics = useMemo(() => allTopics.filter(t => t.week === currentWeek), [allTopics, currentWeek]);
+  const overdueTopics = useMemo(() => {
+    return allTopics
+      .filter((t) => t.week < currentWeek && (t.status === "not_started" || !practiced[t.id]))
+      .sort((a, b) => a.week - b.week)
+      .slice(0, 5);
+  }, [allTopics, currentWeek, practiced]);
   const goals = weekGoals[`w${currentWeek}`] || { revised: false, mocked: false };
   const handleTopicToggle = async (topic: any) => {
     if (topic.status === "not_started") await markTopicStudied(topic.id, 2);
@@ -104,7 +110,7 @@ export default function MissionControl() {
             { href: "/topics", emoji: "📚", label: "Browse Syllabus" },
             { href: "/mocks", emoji: "🎯", label: "Log Mock Score" },
           ].map(item => (
-            <Link key={item.href} href={item.href} className="flex items-center gap-3 p-3 rounded-xl card-glow hover:bg-white/3 transition">
+            <Link key={item.href} href={item.href} prefetch={false} className="flex items-center gap-3 p-3 rounded-xl card-glow hover:bg-white/3 transition">
               <span className="text-sm">{item.emoji}</span>
               <span className="font-mono text-[11px] uppercase font-bold tracking-wider">{item.label}</span>
             </Link>
@@ -202,22 +208,26 @@ export default function MissionControl() {
 
         <div className="card-glow p-4">
           <div className="flex justify-between items-center mb-3 pb-2 border-b border-[rgba(56,189,248,0.12)]">
-            <h2 className="font-mono text-[11px] text-red-400 tracking-widest uppercase font-bold">⚠️ Overdue</h2>
-            <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded font-mono text-[11px] font-bold">{revisions.length}</span>
+            <h2 className="font-mono text-[11px] text-red-400 tracking-widest uppercase font-bold">⚠️ Overdue Topics</h2>
+            <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded font-mono text-[11px] font-bold">{overdueTopics.length}</span>
           </div>
           <div className="space-y-2.5">
-            {revisions.slice(0, 4).map(rev => (
-              <div key={rev.id} className="flex justify-between items-center">
+            {overdueTopics.map(topic => (
+              <div key={topic.id} className="flex justify-between items-center">
                 <div className="min-w-0">
-                  <div className="text-[14px] font-medium truncate max-w-[140px]">{rev.topic}</div>
-                  <div className="text-[10px] font-mono text-muted-foreground uppercase">{rev.subject}</div>
+                  <div className="text-[14px] font-medium truncate max-w-[140px]">{topic.name}</div>
+                  <div className="text-[10px] font-mono text-muted-foreground uppercase flex items-center gap-1 mt-0.5">
+                     <span className="text-red-400 font-bold">WK {topic.week}</span>
+                     <span>·</span>
+                     <span>{topic.status === "not_started" ? "Study Pending" : "Practice Pending"}</span>
+                  </div>
                 </div>
-                <span className={clsx("text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0",
-                  rev.days_overdue > 0 ? "bg-red-500/10 text-red-400" : "bg-amber-500/10 text-amber-400"
-                )}>{rev.days_overdue > 0 ? `${rev.days_overdue}D` : "TODAY"}</span>
+                <span className="bg-red-500/10 text-red-400 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0">
+                  OVERDUE
+                </span>
               </div>
             ))}
-            {revisions.length === 0 && <div className="text-center font-mono text-[13px] text-green-400 py-3 uppercase font-bold tracking-widest">✅ Queue Clear</div>}
+            {overdueTopics.length === 0 && <div className="text-center font-mono text-[13px] text-green-400 py-3 uppercase font-bold tracking-widest">✅ All Caught Up</div>}
           </div>
         </div>
       </div>

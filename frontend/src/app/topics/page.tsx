@@ -52,13 +52,19 @@ export default function TopicsPage() {
           <input type="text" placeholder="Search topics, subjects..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="w-full bg-background border border-[rgba(56,189,248,0.25)] rounded-lg pl-10 pr-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary transition" style={{boxShadow:'0 0 0 1px rgba(56,189,248,0.1), inset 0 0 12px rgba(56,189,248,0.03)'}}/>
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="flex overflow-x-auto pb-4 gap-3 snap-x scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {progress.map(sub => (
-          <div key={sub.code} className="card-glow p-4">
-            <h3 className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase font-semibold mb-2">{sub.name}</h3>
-            <div className="font-display font-bold text-2xl text-foreground">{sub.percent}%</div>
-            <div className="text-[11px] font-mono text-muted-foreground mb-2">{sub.studied}/{sub.total} topics</div>
-            <div className="w-full h-1.5 bg-white/3 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500" style={{width:`${sub.percent}%`}}/></div>
+          <div key={sub.code} className="card-glow p-3 min-w-[150px] md:min-w-0 flex-1 shrink-0 snap-start flex flex-col justify-between">
+            <div>
+              <h3 className="font-mono text-[9px] tracking-widest text-muted-foreground uppercase font-bold mb-1.5 truncate" title={sub.name}>{sub.name}</h3>
+              <div className="flex items-baseline justify-between mb-2.5">
+                <span className="font-display font-bold text-xl text-foreground tabular-nums">{sub.percent}%</span>
+                <span className="text-[9px] font-mono text-muted-foreground/70">{sub.studied}/{sub.total}</span>
+              </div>
+            </div>
+            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-1000 ease-out" style={{width:`${sub.percent}%`}}/>
+            </div>
           </div>
         ))}
       </div>

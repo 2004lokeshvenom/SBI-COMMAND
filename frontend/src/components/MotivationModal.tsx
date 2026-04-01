@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { X, Heart } from "lucide-react";
 
 export function MotivationModal() {
@@ -7,6 +8,16 @@ export function MotivationModal() {
   const [isFading, setIsFading] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (fadeIntervalRef.current) {
+        clearInterval(fadeIntervalRef.current);
+        fadeIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const today = new Date().toDateString();
@@ -39,16 +50,21 @@ export function MotivationModal() {
 
   const handleClose = () => {
     if (isFading) return;
-    
+
     if (audioRef.current) {
       setIsFading(true);
       let vol = audioRef.current.volume;
-      const fadeOut = setInterval(() => {
+      if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+      fadeIntervalRef.current = setInterval(() => {
         if (vol > 0.05) {
           vol -= 0.05;
           if (audioRef.current) audioRef.current.volume = Math.max(0, vol);
         } else {
-          clearInterval(fadeOut);
+          if (fadeIntervalRef.current) {
+            clearInterval(fadeIntervalRef.current);
+            fadeIntervalRef.current = null;
+          }
+          setIsFading(false);
           setShow(false);
         }
       }, 100);
@@ -87,9 +103,16 @@ export function MotivationModal() {
           </button>
 
           <div className="flex justify-center mb-6 mt-2">
-            <div className="w-48 h-64 md:w-60 md:h-80 rounded-2xl overflow-hidden glow-accent"
+            <div className="relative w-48 h-64 md:w-60 md:h-80 rounded-2xl overflow-hidden glow-accent"
               style={{ border: "2px solid rgba(56,189,248,0.3)" }}>
-              <img src="/parents/family.jpg" alt="Family" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              <Image
+                src="/parents/family.jpg"
+                alt="Family"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 192px, 240px"
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
             </div>
           </div>
 

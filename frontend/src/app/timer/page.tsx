@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, RotateCcw, Trophy, Flame, Wind } from "lucide-react";
+import { Play, Pause, RotateCcw, Trophy, Flame, Wind, Maximize2 } from "lucide-react";
 import { getUserState, setUserState } from "@/actions/state";
 import clsx from "clsx";
 
@@ -30,6 +30,7 @@ export default function TimerPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
   const [totalFocus, setTotalFocus] = useState(0);
+  const [fullscreenMode, setFullscreenMode] = useState<"main" | "rest" | null>(null);
   
   // --- Rest Timer State ---
   const [restRemaining, setRestRemaining] = useState(5 * 60);
@@ -51,9 +52,11 @@ export default function TimerPage() {
   const sessionsRef = useRef(0);
   const totalFocusRef = useRef(0);
 
-  // Sync refs to avoid stale closures in timeouts
-  sessionsRef.current = sessions;
-  totalFocusRef.current = totalFocus;
+  // Sync refs to avoid stale closures in timeouts (must not run during render — React 19 compiler rules)
+  useEffect(() => {
+    sessionsRef.current = sessions;
+    totalFocusRef.current = totalFocus;
+  }, [sessions, totalFocus]);
   useEffect(() => { totalSecondsRef.current = totalSeconds; }, [totalSeconds]);
   useEffect(() => { restTotalSecondsRef.current = restTotalSeconds; }, [restTotalSeconds]);
 
@@ -64,6 +67,27 @@ export default function TimerPage() {
     getUserState("timer_stats").then(d => {
       if (d) { setSessions(d.sessions || 0); setTotalFocus(d.totalFocus || 0); }
     });
+  }, []);
+
+  // --- Fullscreen API ---
+  useEffect(() => {
+    const handleFsChange = () => {
+      if (!document.fullscreenElement) {
+        setFullscreenMode(null);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const enterMainFullscreen = useCallback(() => {
+    setFullscreenMode("main");
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  }, []);
+
+  const enterRestFullscreen = useCallback(() => {
+    setFullscreenMode("rest");
+    document.documentElement.requestFullscreen?.().catch(() => {});
   }, []);
 
   const playAlarm = useCallback(() => {
@@ -232,6 +256,29 @@ export default function TimerPage() {
   const statsHidden = isRunning;
 
   return (
+    <>
+    {/* ── FULLSCREEN OVERLAY ── */}
+    {fullscreenMode === "main" && (
+      <div className="fullscreen-timer-overlay">
+        <div className="timer-digits">
+          {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+        </div>
+        <div className="timer-label">
+          {isRunning ? "focusing" : remaining === 0 ? "done" : remaining < totalSeconds ? "paused" : "ready"}
+        </div>
+      </div>
+    )}
+    {fullscreenMode === "rest" && (
+      <div className="fullscreen-timer-overlay">
+        <div className="timer-digits" style={{ color: "#38bdf8" }}>
+          {String(restMinutes).padStart(2, "0")}:{String(restSeconds).padStart(2, "0")}
+        </div>
+        <div className="timer-label" style={{ color: "rgba(56,189,248,0.4)" }}>
+          {isRestRunning ? "breathing" : restRemaining === 0 ? "ready" : "idle"}
+        </div>
+      </div>
+    )}
+
     <div className="min-h-[80vh] flex flex-col xl:flex-row items-center justify-center gap-12 xl:gap-24 overflow-hidden">      
       {/* -------------------- LEFT SIDE: MAIN TIMER -------------------- */}
       <div className="flex flex-col items-center relative">
@@ -361,7 +408,9 @@ export default function TimerPage() {
           >
             {isRunning ? <Pause className="w-7 h-7 text-white" /> : <Play className="w-7 h-7 text-white ml-0.5" />}
           </button>
-          <div className="w-11" />
+          <button onClick={enterMainFullscreen} className="p-3 rounded-full card-glow text-muted-foreground hover:text-foreground transition" title="Fullscreen Timer (ESC to exit)">
+            <Maximize2 className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
@@ -444,7 +493,9 @@ export default function TimerPage() {
           >
             {isRestRunning ? <Pause className="w-5 h-5 text-white" /> : <Play className="w-5 h-5 text-white ml-0.5" />}
           </button>
-          <div className="w-9" />
+          <button onClick={enterRestFullscreen} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-muted-foreground transition" title="Fullscreen Timer (ESC to exit)">
+            <Maximize2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -455,5 +506,6 @@ export default function TimerPage() {
         }
       `}</style>
     </div>
+    </>
   );
 }

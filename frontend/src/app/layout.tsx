@@ -4,7 +4,7 @@ import "./globals.css";
 
 import { TopBar } from "@/components/layout/TopBar";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { ModalProvider } from "@/components/modals/ModalProvider";
+import { ModalLoader } from "@/components/modals/ModalLoader";
 
 const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], display: "swap" });
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
@@ -18,7 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={`${jetbrainsMono.variable} ${inter.variable} h-full antialiased dark`}>
       <body className="min-h-full flex flex-col relative text-foreground">
-        <ModalProvider />
+        <ModalLoader />
         <TopBar />
         <div className="flex flex-1 w-full">
           <Sidebar />

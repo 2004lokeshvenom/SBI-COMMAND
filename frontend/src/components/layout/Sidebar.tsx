@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { useMissionStore } from "@/store/useMissionStore";
 
 const SECTIONS = [
+  { name: "Timetable", href: "/timetable", emoji: "⏰" },
   { name: "Dashboard", href: "/", emoji: "🏠" },
   { name: "Syllabus", href: "/topics", emoji: "📚" },
   { name: "Schedule", href: "/schedule", emoji: "📅" },
@@ -27,6 +28,7 @@ export function Sidebar() {
           <Link
             key={section.name}
             href={section.href}
+            prefetch={false}
             onClick={closeSidebar}
             className={clsx(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] tracking-wide transition-all relative",

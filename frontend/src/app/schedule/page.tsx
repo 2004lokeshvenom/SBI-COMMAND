@@ -79,7 +79,7 @@ export default function SchedulePage() {
             const topics = topicsByWeek[week]||[]; const isOpen=expandedWeeks[week]; const isCurrent=week===currentWeek; const isPast=week<currentWeek; const o=weekOverdue[week]; const g=weekGoals[`w${week}`]||{revised:false,mocked:false};
             const studied=topics.filter(t=>t.status!=="not_started").length; const prac=topics.filter(t=>practiced[t.id]).length;
             return (
-              <div key={week} className={clsx("rounded-xl transition-all", isCurrent?"card-glow border-orange-500/25 bg-orange-500/3":isPast&&!o.allDone?"card-glow border-red-500/20 bg-red-500/3":isPast&&o.allDone?"card-glow border-green-500/15 bg-green-500/3":"card-glow")}>
+              <div key={week} className={clsx("rounded-xl transition-all", isCurrent?"card-glow border-sky-500/25 bg-sky-500/5":isPast&&!o.allDone?"card-glow border-red-500/20 bg-red-500/5":isPast&&o.allDone?"card-glow border-green-500/20 bg-green-500/5":"card-glow opacity-60 border-white/5 bg-white/5")}>
                 <button onClick={()=>toggleWeek(week)} className="w-full flex items-center justify-between p-4 text-left">
                   <div className="flex items-center gap-3 min-w-0">
                     {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0"/> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0"/>}
@@ -135,24 +135,46 @@ export default function SchedulePage() {
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest px-1">Status for Weeks 1–{currentWeek}</p>
           {Array.from({length:currentWeek},(_,i)=>i+1).map(week => {
             const o=weekOverdue[week]; if(!o||o.total===0) return null;
+            const isCurrent = week === currentWeek;
+            
+            const containerClass = isCurrent
+              ? "p-4 rounded-lg border transition-all border-sky-500/20 bg-sky-500/5"
+              : o.allDone
+                ? "p-4 rounded-lg border transition-all border-green-500/20 bg-green-500/5"
+                : "p-4 rounded-lg border transition-all border-red-500/20 bg-red-500/5";
+
             return (
-              <div key={week} className={clsx("p-4 rounded-lg border transition-all",o.allDone?"border-green-500/20 bg-green-500/5":"border-red-500/20 bg-red-500/5")}>
+              <div key={week} className={containerClass}>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2"><span className="font-display font-bold text-sm">Week {week}</span><span className="text-[10px] font-mono text-muted-foreground">{getWeekDateRange(week)}</span>{week===currentWeek&&<span className="text-[9px] font-mono font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded uppercase">Current</span>}</div>
-                  {o.allDone ? <span className="text-xs font-mono font-bold text-green-600 dark:text-green-400 flex items-center gap-1"><CheckCircle2 className="w-4 h-4"/> No Dues</span> : <AlertTriangle className="w-4 h-4 text-red-500"/>}
+                  <div className="flex items-center gap-2">
+                    <span className="font-display font-bold text-sm">Week {week}</span>
+                    <span className="text-[10px] font-mono text-muted-foreground">{getWeekDateRange(week)}</span>
+                    {isCurrent && <span className="text-[9px] font-mono font-bold bg-sky-500 text-white px-1.5 py-0.5 rounded uppercase">Current</span>}
+                  </div>
+                  {!isCurrent ? (
+                    o.allDone 
+                      ? <span className="text-xs font-mono font-bold text-green-600 dark:text-green-400 flex items-center gap-1"><CheckCircle2 className="w-4 h-4"/> No Dues</span> 
+                      : <span className="text-xs font-mono font-bold text-red-500 flex items-center gap-1"><AlertTriangle className="w-4 h-4"/> Overdue</span>
+                  ) : (
+                    <span className="text-xs font-mono font-bold text-sky-400 flex items-center gap-1">In Progress</span>
+                  )}
                 </div>
-                {o.allDone ? <div className="text-xs font-mono text-green-600 dark:text-green-500 uppercase font-bold">All {o.total} items completed ✓</div> : (
+                
+                {o.allDone && !isCurrent ? (
+                  <div className="text-xs font-mono text-green-600 dark:text-green-500 uppercase font-bold">All {o.total} items completed ✓</div>
+                ) : (
                   <div className="flex flex-wrap gap-2 text-[10px] font-mono">
-                    {o.studyLeft>0&&<span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-1 rounded font-bold">{o.studyLeft} study left</span>}
-                    {o.practiceLeft>0&&<span className="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-1 rounded font-bold">{o.practiceLeft} practice left</span>}
-                    {!o.revisionDone&&<span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-2 py-1 rounded font-bold">Revision pending</span>}
-                    {!o.mockDone&&<span className="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-2 py-1 rounded font-bold">Mock pending</span>}
+                    {/* Items pending */}
+                    {o.studyLeft>0 && <span className={clsx("px-2 py-1 rounded font-bold", isCurrent ? "bg-white/10 text-foreground/80" : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400")}>{o.studyLeft} study left</span>}
+                    {o.practiceLeft>0 && <span className={clsx("px-2 py-1 rounded font-bold", isCurrent ? "bg-white/10 text-foreground/80" : "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400")}>{o.practiceLeft} practice left</span>}
+                    {!o.revisionDone && <span className={clsx("px-2 py-1 rounded font-bold", isCurrent ? "bg-white/10 text-foreground/80" : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400")}>Revision pending</span>}
+                    {!o.mockDone && <span className={clsx("px-2 py-1 rounded font-bold", isCurrent ? "bg-white/10 text-foreground/80" : "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400")}>Mock pending</span>}
                   </div>
                 )}
               </div>
             );
           })}
-          {currentWeek<17&&<><div className="font-mono text-xs text-muted-foreground uppercase tracking-widest px-1 pt-4 border-t mt-4">Upcoming Weeks ({currentWeek+1}–17)</div>{Array.from({length:17-currentWeek},(_,i)=>currentWeek+i+1).map(week=><div key={week} className="p-3 rounded-lg transition- shadow-[0_0_2px_theme(colors.red.500)] flex justify-between items-center"><div><span className="font-display font-bold text-sm">Week {week}</span><span className="text-[10px] font-mono text-muted-foreground ml-2">{getWeekDateRange(week)}</span></div><span className="font-mono text-xs text-muted-foreground">{(topicsByWeek[week]||[]).length} items</span></div>)}</>}
+          {currentWeek<17&&<><div className="font-mono text-xs text-muted-foreground uppercase tracking-widest px-1 pt-4 border-t mt-4">Upcoming Weeks ({currentWeek+1}–17)</div>{Array.from({length:17-currentWeek},(_,i)=>currentWeek+i+1).map(week=><div key={week} className="p-3 rounded-lg bg-white/5 border border-white/10 opacity-50 flex justify-between items-center"><div><span className="font-display font-bold text-sm text-foreground/60">Week {week}</span><span className="text-[10px] font-mono text-muted-foreground ml-2">{getWeekDateRange(week)}</span></div><span className="font-mono text-xs text-muted-foreground">{(topicsByWeek[week]||[]).length} items</span></div>)}</>}
         </div>
       )}
     </div>

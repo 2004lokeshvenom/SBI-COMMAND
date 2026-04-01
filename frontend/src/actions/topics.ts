@@ -30,20 +30,49 @@ export async function getAllTopics(filters?: { subject?: string; exam_type?: str
   }));
 }
 
+/** Lean fields only — avoids loading huge nested graphs into Node memory. */
 export async function getAllWeeksData() {
   const user = await prisma.user.findFirst();
   if (!user) return [];
+  return fetchAllWeeksDataForUser(user.id);
+}
+
+export async function fetchAllWeeksDataForUser(userId: string) {
   const topics = await prisma.topic.findMany({
-    include: { chapter: { include: { subject: true } }, progress: { where: { user_id: user.id } } },
-    orderBy: [{ week_number: "asc" }, { chapter: { order_index: "asc" } }]
+    select: {
+      id: true,
+      name: true,
+      week_number: true,
+      priority: true,
+      exam_type: true,
+      chapter: {
+        select: {
+          subject: { select: { name: true, code: true, color: true } },
+        },
+      },
+      progress: {
+        where: { user_id: userId },
+        select: { status: true, confidence: true },
+        take: 1,
+      },
+    },
+    orderBy: [{ week_number: "asc" }, { chapter: { order_index: "asc" } }],
   });
-  return topics.map((t: any) => ({
-    id: t.id, name: t.name, week: t.week_number, subject: t.chapter.subject.name,
-    subjectCode: t.chapter.subject.code, subjectColor: t.chapter.subject.color,
-    priority: t.priority, exam_type: t.exam_type,
-    status: t.progress.length > 0 ? t.progress[0].status : "not_started",
-    confidence: t.progress.length > 0 ? t.progress[0].confidence : 0,
-  }));
+  return topics.map((t) => {
+    const p = t.progress[0];
+    return {
+      id: t.id,
+      name: t.name,
+      week: t.week_number,
+      subject: t.chapter.subject.name,
+      subjectCode: t.chapter.subject.code,
+      subjectColor: t.chapter.subject.color,
+      priority: t.priority,
+      exam_type: t.exam_type,
+      status: p?.status ?? "not_started",
+      confidence: p?.confidence ?? 0,
+    };
+  });
 }
 
 export async function markTopicStudied(topicId: string, confidence: number) {
@@ -82,13 +111,43 @@ export async function unmarkTopicStudied(topicId: string) {
 export async function getSubjectProgress() {
   const user = await prisma.user.findFirst();
   if (!user) return [];
+  return fetchSubjectProgressForUser(user.id);
+}
+
+/** Count-based — does NOT load every topic row into RAM (fixes dev OOM on large syllabi). */
+export async function fetchSubjectProgressForUser(userId: string) {
   const subjects = await prisma.subject.findMany({
-    include: { chapters: { include: { topics: { include: { progress: { where: { user_id: user.id } } } } } } }
+    select: { id: true, code: true, name: true, color: true },
   });
-  return subjects.map((s: any) => {
-    const allTopics = s.chapters.flatMap((c: any) => c.topics);
-    const total = allTopics.length;
-    const studied = allTopics.filter((t: any) => t.progress.length > 0 && t.progress[0].status !== "not_started").length;
-    return { code: s.code, name: s.name, color: s.color, total, studied, percent: total > 0 ? Math.round((studied / total) * 100) : 0 };
+  const out: { code: string; name: string; color: string; total: number; studied: number; percent: number }[] = [];
+  for (const s of subjects) {
+    const total = await prisma.topic.count({ where: { chapter: { subject_id: s.id } } });
+    const studied =
+      total === 0
+        ? 0
+        : await prisma.topic.count({
+            where: {
+              chapter: { subject_id: s.id },
+              progress: { some: { user_id: userId, status: { not: "not_started" } } },
+            },
+          });
+    out.push({
+      code: s.code,
+      name: s.name,
+      color: s.color,
+      total,
+      studied,
+      percent: total > 0 ? Math.round((studied / total) * 100) : 0,
+    });
+  }
+
+  // Sort strictly by requested curriculum order
+  const SUBJECT_ORDER = ["QA", "RE", "EN", "DI", "GA", "REV", "MOCK"];
+  out.sort((a, b) => {
+    const idxA = SUBJECT_ORDER.indexOf(a.code);
+    const idxB = SUBJECT_ORDER.indexOf(b.code);
+    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
   });
+
+  return out;
 }

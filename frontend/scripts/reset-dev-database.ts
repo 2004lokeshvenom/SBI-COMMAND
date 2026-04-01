@@ -1,9 +1,14 @@
+/**
+ * DANGER: Deletes ALL user progress, notes, mocks, and users in the connected database.
+ * Only run against a dev database. Invoke: npm run reset:dev-database
+ */
 import { PrismaClient } from "@prisma/client";
+
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Starting complete progress reset...");
-  
+  console.warn("Starting complete progress reset (dev only)...");
+
   await prisma.topicProgress.deleteMany({});
   await prisma.revisionSchedule.deleteMany({});
   await prisma.studySession.deleteMany({});
@@ -14,11 +19,9 @@ async function main() {
   await prisma.xPEvent.deleteMany({});
   await prisma.notificationLog.deleteMany({});
   await prisma.userState.deleteMany({});
-  
-  // Deleting user forces standard onboarding exactly like a new visit
   await prisma.user.deleteMany({});
-  
-  console.log("Database reset complete. All user records have been cleared.");
+
+  console.warn("Database reset complete. All user records have been cleared.");
 }
 
 main()
