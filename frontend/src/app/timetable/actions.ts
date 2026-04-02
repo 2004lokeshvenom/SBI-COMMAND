@@ -15,8 +15,9 @@ export async function generateAITimetable(startTimeMs: number): Promise<Timetabl
     now.setMinutes(Math.floor(now.getMinutes() / 10) * 10, 0, 0);
     // ----------------------------------------------
 
-    const currentHour = now.getHours(); // 0-23 format
-    const startTimeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    // FORCE IST TIMEZONE (Asia/Kolkata) FOR VERCEL DEPLOYMENTS (UTC)
+    const currentHour = parseInt(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata", hourCycle: "h23", hour: "numeric" }), 10);
+    const startTimeStr = now.toLocaleTimeString("en-US", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
 
     let targetHours = 0;
     let expectedEndTime = "";
@@ -147,46 +148,14 @@ Do NOT wrap the output in markdown code blocks (no \` \`\`\`json \`\`\` \`). Do 
     }
     
     // Helper to carefully parse LLM string times back into absolute ms
-    let currentDayMarker = new Date(startTimeMs);
-    currentDayMarker.setHours(0, 0, 0, 0);
-
-    function parseTimeStr(timeStr: any, prevMs: number): number | null {
-      if (!timeStr || typeof timeStr !== 'string') return null;
-      const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-      if (!match) return null;
-      let h = parseInt(match[1]);
-      const m = parseInt(match[2]);
-      const ampm = match[3]?.toUpperCase();
-      
-      if (ampm === "PM" && h < 12) h += 12;
-      if (ampm === "AM" && h === 12) h = 0;
-      
-      const d = new Date(currentDayMarker);
-      d.setHours(h, m, 0, 0);
-      let ms = d.getTime();
-      
-      // If we jumped backward by more than 4 hours, we likely crossed midnight
-      while (ms < prevMs - 4 * 3600 * 1000) {
-         currentDayMarker.setDate(currentDayMarker.getDate() + 1);
-         const nd = new Date(currentDayMarker);
-         nd.setHours(h, m, 0, 0);
-         ms = nd.getTime();
-      }
-      return ms;
-    }
-
-    // Sequential fallback cursor in case LLM math is wrong or unparseable
-    // --- FIX: Base cumulativeCursor on the ROUNDED time too ---
+    // Sequential timeline accumulation
     let cumulativeCursor = now.getTime(); 
 
     const blocks: TimeBlock[] = parsedBlocks.map((b: any) => {
       const dur = Number(b.durationMinutes);
       
-      const parsedSt = parseTimeStr(b.startTime, cumulativeCursor);
-      const st = parsedSt !== null ? parsedSt : cumulativeCursor;
-      
-      const parsedEt = parseTimeStr(b.endTime, st);
-      const et = parsedEt !== null ? parsedEt : (st + (dur * 60000));
+      const st = cumulativeCursor;
+      const et = st + (dur * 60000);
       
       cumulativeCursor = et;
 
